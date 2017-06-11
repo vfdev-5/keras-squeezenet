@@ -16,6 +16,7 @@ WEIGHTS_PATH = "https://github.com/rcmalli/keras-squeezenet/releases/download/v1
 
 # Modular function for Fire Node
 
+
 def fire_module(x, fire_id, squeeze=16, expand=64):
     s_id = 'fire' + str(fire_id) + '/'
 
@@ -40,26 +41,18 @@ def fire_module(x, fire_id, squeeze=16, expand=64):
 # Original SqueezeNet from paper.
 
 def SqueezeNet(input_tensor=None, input_shape=None,
-               weights='imagenet',
-               classes=1000):
-    
+               weights='imagenet', include_top=True, classes=1000):
 
-        
     if weights not in {'imagenet', None}:
         raise ValueError('The `weights` argument should be either '
                          '`None` (random initialization) or `imagenet` '
                          '(pre-training on ImageNet).')
 
-    if weights == 'imagenet' and classes != 1000:
-        raise ValueError('If using `weights` as imagenet with `include_top`'
-                         ' as true, `classes` should be 1000')
-
-
     input_shape = _obtain_input_shape(input_shape,
                                       default_size=227,
                                       min_size=48,
                                       data_format=K.image_data_format(),
-                                      include_top=True)
+                                      include_top=include_top)
 
     if input_tensor is None:
         img_input = Input(shape=input_shape)
@@ -68,7 +61,6 @@ def SqueezeNet(input_tensor=None, input_shape=None,
             img_input = Input(tensor=input_tensor, shape=input_shape)
         else:
             img_input = input_tensor
-
 
     x = Convolution2D(64, (3, 3), strides=(2, 2), padding='valid', name='conv1')(img_input)
     x = Activation('relu', name='relu_conv1')(x)
@@ -88,7 +80,8 @@ def SqueezeNet(input_tensor=None, input_shape=None,
     x = fire_module(x, fire_id=9, squeeze=64, expand=256)
     x = Dropout(0.5, name='drop9')(x)
 
-    x = Convolution2D(classes, (1, 1), padding='valid', name='conv10')(x)
+    name = 'conv10' if classes == 1000 else 'conv10_%i' % classes
+    x = Convolution2D(classes, (1, 1), padding='valid', name=name)(x)
     x = Activation('relu', name='relu_conv10')(x)
     x = GlobalAveragePooling2D()(x)
     out = Activation('softmax', name='loss')(x)
@@ -108,7 +101,7 @@ def SqueezeNet(input_tensor=None, input_shape=None,
         weights_path = get_file('squeezenet_weights_tf_dim_ordering_tf_kernels.h5',
                                     WEIGHTS_PATH,
                                     cache_subdir='models')
-        model.load_weights(weights_path)
+        model.load_weights(weights_path, by_name=True)
         if K.backend() == 'theano':
             layer_utils.convert_all_kernels_in_model(model)
 
