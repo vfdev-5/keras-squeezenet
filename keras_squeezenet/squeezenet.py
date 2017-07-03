@@ -83,8 +83,11 @@ def SqueezeNet(input_tensor=None, input_shape=None,
     name = 'conv10' if classes == 1000 else 'conv10_%i' % classes
     x = Convolution2D(classes, (1, 1), padding='valid', name=name)(x)
     x = Activation('relu', name='relu_conv10')(x)
-    x = GlobalAveragePooling2D()(x)
-    out = Activation('softmax', name='loss')(x)
+    if include_top:
+        x = GlobalAveragePooling2D()(x)
+        out = Activation('softmax', name='loss')(x)
+    else:
+        out = x
 
     # Ensure that the model takes into account
     # any potential predecessors of `input_tensor`.
